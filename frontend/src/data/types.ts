@@ -30,6 +30,18 @@ export type PageResult = {
 export type ActionResult = {
   ok: boolean
   message: string
+  // 并发安排同一任务被幂等合并时置 true：只保留一次，不重复落数据。
+  deduped?: boolean
+}
+
+// 复查异常台条目：只暴露异常处理与复查要核对的五个字段。
+export type ReviewDeskItem = {
+  id: number
+  清洁编号: string
+  关联航班: string
+  清洁类型: string
+  清洁班组: string
+  清洁状态: string
 }
 
 export type OverviewResult = {

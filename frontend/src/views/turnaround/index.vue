@@ -43,7 +43,10 @@
       </thead>
       <tbody>
         <tr v-for="row in rows" :key="String(row.id)">
-          <td v-for="column in columns" :key="column">{{ row[column] ?? '—' }}</td>
+          <td v-for="column in columns" :key="column">
+            <span v-if="column === '超时核对项' && row[column] === '待核对'" class="check-pending">待核对</span>
+            <template v-else>{{ row[column] ?? '—' }}</template>
+          </td>
           <td>{{ row.status }}</td>
           <td class="row-actions">
             <button
@@ -82,7 +85,7 @@ import {
 import type { EntryRow } from '@/data/types'
 
 const meta = moduleMeta('turnaround')
-const columns = ["过站编号", "关联航班", "计划到港", "实际到港", "过站时长", "保障进度", "异常事项", "过站状态"]
+const columns = ["过站编号", "关联航班", "计划到港", "实际到港", "过站时长", "保障进度", "异常事项", "过站状态", "超时核对项"]
 const actions = ["开始监测", "正常完成", "标记超时"]
 const statuses = ["待监测", "监测中", "正常完成", "已超时"]
 const stats = [{"label": "监测中航班", "value": 0}, {"label": "正常完成航班", "value": 0}, {"label": "超时航班", "value": 0}]
@@ -91,7 +94,8 @@ const rows = ref<EntryRow[]>([])
 const total = ref(0)
 const errorMessage = ref('')
 const filters = ref<Record<string, string>>({})
-const filterFields = columns.slice(0, 3)
+// 超时核对项随客舱清洁异常同步，也支持按核对结果筛选。
+const filterFields = ["过站编号", "关联航班", "超时核对项"]
 const statusSummary = computed(() =>
   statuses.map((status: string) => ({
     status,

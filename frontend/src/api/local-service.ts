@@ -23,9 +23,29 @@ export function filterRows(rows: EntryRow[], filters: Record<string, string>): E
   )
 }
 
+// 过站监控清单要同步客舱清洁的超时核对项：
+// 同一关联航班上只要有清洁任务处于异常中断/需复查，这班的过站核对项就是「待核对」；
+// 异常消除（续作完成或复查通过）后自动回到「无需核对」。派生值不落库，始终以清洁侧为准。
+const CABIN_ABNORMAL_STATUSES = ['异常中断', '需复查']
+
+export function withTurnaroundCheck(rows: EntryRow[]): EntryRow[] {
+  const cabinRows = listRows('cabin_clean')
+  const abnormalFlights = new Set(
+    cabinRows
+      .filter((row) => CABIN_ABNORMAL_STATUSES.includes(String(row.status)))
+      .map((row) => String(row['关联航班'] ?? '')),
+  )
+  return rows.map((row) => ({
+    ...row,
+    超时核对项: abnormalFlights.has(String(row['关联航班'] ?? '')) ? '待核对' : '无需核对',
+  }))
+}
+
 export function listEntries(key: string, filters: Record<string, string> = {}): PageResult {
-  const matched = filterRows(listRows(key), filters)
-  return { items: matched, total: matched.length, page: 1, size: matched.length }
+  const source = key === 'turnaround' ? withTurnaroundCheck(listRows(key)) : listRows(key)
+  // 过站的超时核对项是派生字段，必须先派生再筛选。
+  const items = filterRows(source, filters)
+  return { items, total: items.length, page: 1, size: items.length }
 }
 
 export function runAction(key: string, id: number, action: string): ActionResult {
@@ -65,7 +85,8 @@ export function exportEntries(key: string): { filename: string; content: string 
   const meta = moduleMeta(key)
   const header = ['编号', ...meta.fields, '当前状态']
   const lines = [header.join(',')]
-  for (const row of listRows(key)) {
+  const rows = key === 'turnaround' ? withTurnaroundCheck(listRows(key)) : listRows(key)
+  for (const row of rows) {
     lines.push([row.id, ...meta.fields.map((field) => row[field] ?? ''), row.status].join(','))
   }
   return { filename: `${meta.name}-清单.csv`, content: `\uFEFF${lines.join('\n')}` }

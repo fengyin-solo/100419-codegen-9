@@ -18,13 +18,9 @@ function readStorage(): Record<string, EntryRow[]> {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(fallback))
     return fallback
   }
-  try {
-    const parsed = JSON.parse(raw) as Record<string, EntryRow[]>
-    return { ...fallback, ...parsed }
-  } catch {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(fallback))
-    return fallback
-  }
+  // 数据损坏要把原因暴露给上层（如复查异常台），不能静默回退，否则页面无法说明读取失败原因。
+  const parsed = JSON.parse(raw) as Record<string, EntryRow[]>
+  return { ...fallback, ...parsed }
 }
 
 let cache: Record<string, EntryRow[]> | null = null
