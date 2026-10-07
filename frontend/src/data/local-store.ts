@@ -29,6 +29,33 @@ function readStorage(): Record<string, EntryRow[]> {
 
 let cache: Record<string, EntryRow[]> | null = null
 
+// 数据变更订阅：模块之间互相同步（比如过站监控清单要跟着客舱清洁的超时核对项走）。
+type RowsListener = () => void
+const listeners = new Set<RowsListener>()
+
+export function subscribeRows(listener: RowsListener): () => void {
+  listeners.add(listener)
+  return () => {
+    listeners.delete(listener)
+  }
+}
+
+function notifyRows(): void {
+  for (const listener of listeners) {
+    listener()
+  }
+}
+
+// 别的标签页改了同一份 localStorage 时，丢掉缓存重新读，并通知订阅方。
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (event) => {
+    if (event.key === STORAGE_KEY) {
+      cache = null
+      notifyRows()
+    }
+  })
+}
+
 export function allRows(): Record<string, EntryRow[]> {
   if (cache === null) {
     cache = readStorage()
@@ -46,6 +73,7 @@ export function saveRows(key: string, rows: EntryRow[]): void {
   if (typeof window !== 'undefined' && window.localStorage) {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
   }
+  notifyRows()
 }
 
 export function resetRows(key: string): EntryRow[] {

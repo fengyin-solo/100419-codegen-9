@@ -32,6 +32,14 @@ export type ActionResult = {
   message: string
 }
 
+// 客舱清洁登记/合并入参：清洁编号必填，其余字段缺省时按合并规则处理。
+export type CleaningTaskInput = {
+  清洁编号: string
+  关联航班?: string
+  清洁类型?: string
+  清洁班组?: string
+}
+
 export type OverviewResult = {
   cards: { label: string; value: number }[]
   modules: { name: string; created: number; pending: number; abnormal: number }[]
